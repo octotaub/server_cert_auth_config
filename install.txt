@@ -65,9 +65,14 @@ http {
 	ssl_session_timeout 1d;
 	ssl_session_cache shared:SSL:10m;
 	ssl_session_tickets off;
+	
+	#HSTS
+	#add_header Strict-Transport-Security "max-age=31536000; 
+  	#includeSubDomains; preload" always;
 
 	# Diffie-Hellman parameter for DHE ciphersuites
 	ssl_dhparam /etc/nginx/dhparam.pem;
+	ssl_ecdh_curve secp384r1;
 
 	# Mozilla Intermediate configuration
 	ssl_protocols TLSv1.2 TLSv1.3;
@@ -141,7 +146,7 @@ server {
 _________________________________________________________________________________________________________
 
 #Generate Diffie-Hellman keys:
-sudo openssl dhparam -out /etc/nginx/dhparam.pem 2048
+sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
 
 #Ein zufälliges PW erstellen um (Root-)CA (server.priv.key) zu schützen
 ##openssl rand -base64 32 > mypass.enc
