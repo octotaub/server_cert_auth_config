@@ -22,7 +22,8 @@ sudo systemctl start nginx
 #Browser öffnen :80 läuft
 #:443 läuft nicht
 
-
+#Seite anpassen
+sudo nano /var/www/html/index.html
 
 _________________________________________________________________________________________________________
 #nginx-config anpassen
@@ -92,14 +93,13 @@ server {
 	listen [::]:443 ssl http2;
 
 	server_name server;
-	set $base /var/www/html;
-	root $base/public;
-
+	root /var/www/html;
+	
 	# SSL
 	ssl_certificate /etc/nginx/ssl/server.crt;
 	ssl_certificate_key /etc/nginx/ssl/server.priv.key;
-    ssl_client_certificate /etc/nginx/ssl/server.crt;
-    ssl_verify_client on;
+        ssl_client_certificate /etc/nginx/ssl/server.crt;
+        ssl_verify_client on;
 
 
 	# logging
@@ -150,8 +150,9 @@ sudo openssl dhparam -out /etc/nginx/dhparam.pem 2048
 
 #Beginnen wir damit den Private-Key für den Server zu erzeugen. Das erreichen wir mit folgender Zeile. Der Key hat eine Schlüssellänge von 4096 Bit und wird mit dem Dateinamen server.priv.key gespeichert.
 
+
 #openssl genrsa -des3 -passout file:mypass.enc -out server.priv.key 4096
-openssl genrsa -des3  -out server.priv.key 4096
+openssl genrsa -out server.priv.key 4096
 
 #Danach erstellen wir das Certificate Signing Request. CA erstellen
 #openssl req -new -x509 -days 365 -key server.priv.key -out server.csr -passin file:mypass.enc
@@ -200,7 +201,7 @@ openssl req -new -key user_stefan_cert.key -out user_stefan_cert.req
 openssl ca -cert /etc/nginx/ssl/server.crt -keyfile /etc/nginx/ssl/server.priv.key -out user_stefan_cert.crt -in user_stefan_cert.req
 
 
-#Jetzt haben wir das Benutzerzertifikat erzeugt, aber es geht so noch nicht zu verwenden. Wir müssen es noch in ein Format bringen, welches die Browser verstehen und importieren können. Dazu nutzt man üblicherweise das p12-#Format. Folgende Zeile erzeugt uns was wir brauchen. Außerdem wird ein Export-Passwort abgefragt. Wir wählen natürlich ein vernünftiges nach dem üblichen Regeln der Kunst, um kein zu lasches Passwort zu erhalten. Dazu #gehören 12 Zeichen Länge, inbegriffen Sonderzeichen, Groß- und Kleinschreibung sowie Zahlen.
+#Jetzt haben wir das Benutzerzertifikat erzeugt, aber es geht so noch nicht zu verwenden. Wir müssen es noch in ein Format bringen, welches die Browser verstehen und importieren können. Dazu nutzt man üblicherweise das p12-Format. Folgende Zeile erzeugt uns was wir brauchen. Außerdem wird ein Export-Passwort abgefragt. Wir wählen natürlich ein vernünftiges nach dem üblichen Regeln der Kunst, um kein zu lasches Passwort zu erhalten. Dazu gehören 12 Zeichen Länge, inbegriffen Sonderzeichen, Groß- und Kleinschreibung sowie Zahlen.
 
 
 openssl pkcs12 -export -inkey user_stefan_cert.key -name "User_Stefan" -in user_stefan_cert.crt -certfile /etc/nginx/ssl/server.crt -out user_stefan_cert.p12
@@ -209,7 +210,7 @@ openssl pkcs12 -export -inkey user_stefan_cert.key -name "User_Stefan" -in user_
 
 
 #Webserver Cert-Auth aktivieren
-#Damit der Webserver die Zertifikatsauthentifikation nutzt, ist eine Direktive in der .conf des vHosts zu setzen.
+#Damit der Webserver die Zertifikatsauthentifikation nutzt, ist eine Direktive in der .conf des vHosts zu setzen.(s.o.)
 #nun Webserver neustarten
 
 sudo systemctl restart nginx
