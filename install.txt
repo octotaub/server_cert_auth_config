@@ -1,32 +1,32 @@
+#Generate a ssh key for login to your server. Remember to close the login with password.
+
 #sshkeygen
 ssh-keygen -t ecdsa -b 521
 
-#key auf Server kopieren
+#copy ssh key to server
 ssh-copy-id -i ~/.ssh/tatu-key-ecdsa user@host
 
 #login to server using ssh key
 ssh -i ~/.ssh/old_keys/host2_key username@host2.somewhere.edu
 
 __________________________________________________________________________________________________________
-#VM konfigurieren
+#Linux VM configuration
+
 sudo apt update
 sudo apt upgrade
 sudo apt install nginx
 sudo apt install certbot
 
-#falls noch nicht automatisch gestartet
+#if not startet yet, start nginx
 sudo systemctl start nginx
 
+#open browser in INCOGNITO MODE http (port:80) is running. https (port:443) is not running.
 
-
-#Browser öffnen :80 läuft
-#:443 läuft nicht
-
-#Seite anpassen
+#Update your site if needed
 sudo nano /var/www/html/index.html
 
 _________________________________________________________________________________________________________
-#nginx-config anpassen
+#change nginx-config 
 
 
 #/etc/nginx/nginx.conf
@@ -148,42 +148,39 @@ ________________________________________________________________________________
 #Generate Diffie-Hellman keys:
 sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
 
-#Ein zufälliges PW erstellen um (Root-)CA (server.priv.key) zu schützen
-##openssl rand -base64 32 > mypass.enc
 
-#Serverzertifikat erstellen:
+#Generate server certificate:
 
-#Beginnen wir damit den Private-Key für den Server zu erzeugen. Das erreichen wir mit folgender Zeile. Der Key hat eine Schlüssellänge von 4096 Bit und wird mit dem Dateinamen server.priv.key gespeichert.
+#Let's start by creating the private key for the server. We achieve this with the following line. The key has a key length of 4096 bits and is saved with the file name server.priv.key.
 
-
-#openssl genrsa -des3 -passout file:mypass.enc -out server.priv.key 4096
 openssl genrsa -out server.priv.key 4096
 
-#Danach erstellen wir das Certificate Signing Request. CA erstellen
-#openssl req -new -x509 -days 365 -key server.priv.key -out server.csr -passin file:mypass.enc
+
+#Then we create the Certificate Signing Request. 
 
 openssl req -new -key server.priv.key -out server.csr
 
 FQDN: octotaub (Only option which has to be filled)
 PW is optional
 
-#Danach kann man ganz einfach den Key selbst signieren, um ein gültiges Serverzertifikat zu erhalten. Das geht so:
+#After that, you can easily sign the key yourself to get a valid server certificate. This is how it works:
 
 openssl x509 -in server.csr -out server.crt  -req -signkey server.priv.key -days 365
 
-#Das Zertifikat ist 365 Tage gültig und wird als server.crt abgespeichert. Die Dateien server.crt und server.priv.key in ein für den Webserver zugänglichen Pfad abgelegen bspw. /etc/nginx/ssl.
+#The certificate is valid for 365 days and is saved as server.crt. The files server.crt and server.priv.key are stored in a path accessible to the web server, e.g. /etc/nginx/ssl.
+
 sudo mkdir /etc/nginx/ssl
-sudo mv server.* /etc/nginx/ssl
+sudo cp server.* /etc/nginx/ssl
 
-#Benutzer- bzw. Clientzertifikat erstellen
+#Create user and client certificate
 
-#Jetzt brauchen wir noch das Zertifikat für den Client. Damit wir uns das Zertifikat gescheit ausstellen können, konfigurieren wir uns openSSL ein bisschen. Dazu führen wir folgende Zeile aus:
+#Now we need the certificate for the client. To be able to issue the certificate properly, we configure openSSL a bit. To do this, we execute the following line:
 
-#Client Zertifikat erstellen
+#Create Client Certificate
 sudo sed -i 's/= .\/demoCA/= \/root\/ca/g' /etc/ssl/openssl.cnf
-#alternativ openssl genrsa -out client.key.pem 4096 und auch in der /etc/ssl/openssl.cnf in Zeile 42 den Pfad per Hand ändern.
+#alternatively openssl genrsa -out client.key.pem 4096 and also change the path in /etc/ssl/openssl.cnf in line 42 by hand.
 
-#Danach legen wir noch die notwendigen Verzeichnisse und Dateien an.
+#Then we create the necessary directories and files.
 sudo su
 mkdir /root/ca
 cd /root/ca
@@ -191,29 +188,34 @@ mkdir certs crl csr newcerts private
 touch index.txt
 echo 1000 > serial
 
+#switch to normal user
 
-#Ab jetzt können wir endlich mit dem Benutzer-Zertifikat beginnen. Einfach die folgenden Kommandos der Reihe nach ausführen:
-#Private Key erzeugen
-openssl genrsa -des3 -out user_stefan_cert.key
+#From now on we can finally start with the user certificate. Simply execute the following commands in order:
+#Create Private Key
+openssl genrsa -des3 -out user_test_cert.key
 
-#request erstellen
-openssl req -new -key user_stefan_cert.key -out user_stefan_cert.req
+#create request
+openssl req -new -key user_test_cert.key -out user_test_cert.req
 
-#und mit ca des servers signieren
-openssl ca -cert /etc/nginx/ssl/server.crt -keyfile /etc/nginx/ssl/server.priv.key -out user_stefan_cert.crt -in user_stefan_cert.req
-
-
-#Jetzt haben wir das Benutzerzertifikat erzeugt, aber es geht so noch nicht zu verwenden. Wir müssen es noch in ein Format bringen, welches die Browser verstehen und importieren können. Dazu nutzt man üblicherweise das p12-Format. Folgende Zeile erzeugt uns was wir brauchen. Außerdem wird ein Export-Passwort abgefragt. Wir wählen natürlich ein vernünftiges nach dem üblichen Regeln der Kunst, um kein zu lasches Passwort zu erhalten. Dazu gehören 12 Zeichen Länge, inbegriffen Sonderzeichen, Groß- und Kleinschreibung sowie Zahlen.
+#and sign with ca of the server
+openssl ca -cert /etc/nginx/ssl/server.crt -keyfile /etc/nginx/ssl/server.priv.key -out user_test_cert.crt -in user_test_cert.req
 
 
-openssl pkcs12 -export -inkey user_stefan_cert.key -name "User_Stefan" -in user_stefan_cert.crt -certfile /etc/nginx/ssl/server.crt -out user_stefan_cert.p12
-
-#Die Datei user_stefan_cert_p12 muss nun dem entsprechenden Benutzer, der die Website besuchen können soll, zur Verfügung gestellt werden samt dem dazugehörigen Export-Passwort. Ein Import ohne Passwort ist nicht möglich!
+#We have now created the user certificate, but it cannot be used yet. We still have to put it into a format that the browsers can understand and import. The p12 format is usually used for this. The following line generates what we need. It also asks for an export password. Of course, we choose a reasonable one according to the usual rules of art, so as not to get a password that is too lax. This includes 12 characters in length, including special characters, upper and lower case as well as numbers.
 
 
-#Webserver Cert-Auth aktivieren
-#Damit der Webserver die Zertifikatsauthentifikation nutzt, ist eine Direktive in der .conf des vHosts zu setzen.(s.o.)
-#nun Webserver neustarten
+openssl pkcs12 -export -inkey user_test_cert.key -name "User_test" -in user_test_cert.crt -certfile /etc/nginx/ssl/server.crt -out user_test_cert.p12
+
+#The file user_test_cert_p12 must now be made available to the corresponding user who is to be able to visit the website, together with the corresponding export password. Importing without a password is not possible!
+
+
+#Enable Cert-Auth web server
+#To make the webserver use the certificate authentication, set a directive in the .conf of the vHost.(see above)
+#Now restart the web server
 
 sudo systemctl restart nginx
 sudo systemctl status nginx
+
+
+#congratulations! 
+#try using a valid CA instead of a self signed certificate
