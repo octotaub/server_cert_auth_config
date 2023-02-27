@@ -164,11 +164,8 @@ openssl genrsa -out server.priv.key 4096
 
 openssl req -new -key server.priv.key -out server.csr
 
-DE
-NRW
-colenio
-FQDN: st
-PW ist optional
+FQDN: octotaub (Only option which has to be filled)
+PW is optional
 
 #Danach kann man ganz einfach den Key selbst signieren, um ein gültiges Serverzertifikat zu erhalten. Das geht so:
 
